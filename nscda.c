@@ -33,6 +33,8 @@
 #include <texttool.h>
 #include <tcpip.h>
 
+#include <stdio.h>
+
 
 extern Word GetKey(void);
 extern void debug(void);

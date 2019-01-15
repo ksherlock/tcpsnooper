@@ -25,9 +25,9 @@
 *=================================================
 
 	case on
-	copy /lang/orca/libraries/ainclude/e16.gsos
-	copy /lang/orca/libraries/ainclude/e16.event
-	copy /lang/orca/libraries/ainclude/e16.memory
+	copy 13/ainclude/e16.gsos
+	copy 13/ainclude/e16.event
+	copy 13/ainclude/e16.memory
                       
 	mcopy cda.mac
 

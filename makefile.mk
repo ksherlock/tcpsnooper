@@ -35,7 +35,7 @@ LDLIBS += -l liborca
 
 netstat: netstat.o
 	$(CC) $(LDFLAGS) netstat.o $(LDLIBS) -o $@
-                  
+
 tcpsnooper.cda: cda.o nscda.o debug.o
 	$(CC) $(LDFLAGS) cda.o nscda.o debug.o $(LDLIBS) -o $@
 	chtyp -t cda $@
