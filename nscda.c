@@ -113,49 +113,66 @@ void Display(Word ipid, srBuff *srBuffer) {
   buffer[66] = '\r';
   buffer[67] = 0;
 
-  WriteCString(buffer);
+  fputs(buffer, stdout);
 }
 
 asm int ReadKey(void) {
   sep #0x20
   loop:
-  lda >0xe0c0000
+  lda >0xe0c000
   bpl loop
   sta >0xe0c010
   rep #0x20
   and #0x7f
+  rtl
 }
+
+/* ORCA Console control codes */
+#define CURSOR_ON 0x05
+#define CURSOR_OFF 0x06
+
+/* cursor keys */
+#define LEFT 0x80
+#define RIGHT 0x15
+#define UP 0x0b
+#define DOWN 0x0a
+#define ESC 0x1b
 
 int ReadInt(void) {
   unsigned i = 0;
   unsigned c;
   unsigned rv;
 
+  putchar(CURSOR_ON);
   while (1) {
-    c = ReadChar(0);
+    c = ReadKey();
+    if (c == 0x1b) {
+      rv = -1;
+      break;
+    }
     if (c == 13) {
-      WriteChar(13);
-      WriteChar(10);
-      if (i == 0)
-        return -1;
-      return rv;
+      if (i == 0) rv = -1;
+      break;
     } else if ((c == 8) || (c == 0x7f)) {
       if (i) {
-        WriteChar(8);
-        WriteChar(' ');
-        WriteChar(8);
+        putchar(8);
+        putchar(' ');
+        putchar(8);
         i--;
         rv /= 10;
       }
     } else if ((c >= '0') && (c <= '9')) {
       if (i < 5) {
-        WriteChar(c);
+        putchar(c);
         i++;
         rv *= 10;
         rv += c - '0';
       }
+      else SysBeep();
     }
   }
+  putchar(CURSOR_OFF);
+  return rv;
 }
 static char buffer[80];
 
@@ -167,7 +184,7 @@ void DisplayLinkLayer(void) {
 
   TCPIPGetLinkLayer(&link);
 
-  WriteChar(0x0c);
+  //WriteChar(0x0c);
   putchar(0x0c);
 
   printf("Link Layer:\r");
@@ -176,7 +193,7 @@ void DisplayLinkLayer(void) {
   VersionString(0, link.liVersion, buffer);
   printf("  Version:    %b\r", buffer);
   printf("  Flags:      $%04x\r", link.liFlags);
-
+  fputs("\r", stdout);
   lv = TCPIPGetLinkVariables();
   printf("Link Variables\r");
   printf("  Version:    %d\r", lv->lvVersion);
@@ -187,8 +204,7 @@ void DisplayLinkLayer(void) {
   printf("  Errors:     $%08lx\r", lv->lvErrors);
   printf("  MTU:        %d\r", lv->lvMTU);
 
-  WriteChar('\r');
-  c = ReadChar(0);
+  ReadKey();
 }
 
 void DisplayTCP(void) {
@@ -226,12 +242,46 @@ void DisplayTCP(void) {
   printf("Alive Minutes:  %d\r", TCPIPGetAliveMinutes());
   printf("Login Count:    %d\r", TCPIPGetLoginCount());
 
-  WriteChar('\r');
-  c = ReadChar(0);
+  ReadKey();
+}
+
+unsigned DisplayIpid(unsigned ipid) {
+  /* extended debug information */
+  Handle h;
+  Word size;
+  unsigned page = 0;
+
+  putchar(0x0c);
+  printf("IPID: %d\r", ipid);
+
+    h = (Handle)TCPIPGetUserRecord(ipid);
+    if (_toolErr) return;
+    if (!h) return;
+    size = (Word)GetHandleSize(h);
+
+    printf("Datagram count (all): %d\r",
+      TCPIPGetDatagramCount(ipid, protocolAll));
+
+    printf("Datagram count (icmp): %d\r",
+      TCPIPGetDatagramCount(ipid, protocolICMP));
+
+    printf("Datagram count (tcp): %d\r",
+      TCPIPGetDatagramCount(ipid, protocolTCP));
+
+    printf("Datagram count (udp): %d\r",
+      TCPIPGetDatagramCount(ipid, protocolUDP));
+
+
+    printf("User statistic 1: $%08lx\r",
+      TCPIPGetUserStatistic(ipid, 1));
+
+    printf("User statistic 2: $%08lx\r",
+      TCPIPGetUserStatistic(ipid, 2));
+
+    GetKey();
 }
 
 unsigned DisplayMain(void) {
-  Word i;
   Word count;
 
   static srBuff srBuffer;
@@ -245,24 +295,24 @@ unsigned DisplayMain(void) {
 
 redraw:
 
-  WriteChar(0x0c);
-  WriteCString(Header1);
-  WriteCString(Header2);
+  putchar(0x0c);
+  fputs(Header1, stdout);
+  fputs(Header2, stdout);
 
   line = 2;
   for (; count && ipid < 100; ipid += 2) {
 
-    TCPIPStatusTCP(i, &srBuffer);
+    TCPIPStatusTCP(ipid, &srBuffer);
     if (_toolErr)
       continue;
 
-    Display(i, &srBuffer);
+    Display(ipid, &srBuffer);
 
     --count;
     ++line;
     if (line == 24) {
-      WriteCString("-- more --");
-      c = ReadChar(0) & 0x7f;
+      fputs("-- more --", stdout);
+      c = ReadKey();
       if (c == 'Q' || c == 'q' || c == 0x1b)
         return 0;
       goto redraw;
@@ -270,14 +320,18 @@ redraw:
   }
 
   while (line < 23) {
-    WriteChar('\r');
+    putchar('\r');
     ++line;
   }
 
-  WriteCString("Q: Quit.  D: Save debug file");
+  fputs("Q: Quit.  D: Save debug file T: TCP Status L: Link Layer status", stdout);
   for (;;) {
-    c = ReadChar(0) & 0x7f;
+    c = ReadKey();
     switch (c) {
+    case 'q':
+    case 'Q':
+    case 0x1b:
+      return 0;
     case 'D':
     case 'd':
       // debug();
@@ -293,10 +347,17 @@ redraw:
     case ' ':
       goto redraw;
       break;
-    case 'q':
-    case 'Q':
-    case 0x1b:
-      return 0;
+    case 'I':
+    case 'i':
+      /* sigh... \r is also a line feed. */
+      /* reverse line feed first to negate it. */
+      putchar(31);
+      putchar('\r');
+      putchar(29);
+      fputs("IPID: ", stdout);
+      c = ReadInt();
+      if ((int)c >= 0) DisplayIpid(c);
+      return 1;
     }
   }
 }
@@ -332,18 +393,18 @@ void StopTT(void) {
 }
 
 void StartUp(void) {
-  StartTT();
-  putchar(0x06); /* turn off cursor */
+  //StartTT();
+  putchar(CURSOR_OFF); /* turn off cursor */
 
   if (TCPIPStatus() == 0 || _toolErr) {
-    WriteCString("Marinetti is not active\r");
-    ReadChar(0);
+    fputs("Marinetti is not active", stdout);
+    ReadKey();
   } else {
     while (DisplayMain()) /* */
       ;
   }
 
-  StopTT();
+  //StopTT();
 }
 
 void ShutDown(void) {}
