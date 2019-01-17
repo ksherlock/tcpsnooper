@@ -117,11 +117,18 @@ void Display(Word ipid, srBuff *srBuffer) {
 
     fputs(buffer, stdout);
 }
-
+/* clang-format off */
 asm int ReadKey(void) {
-    sep #0x20 loop : lda > 0xe0c000 bpl loop sta > 0xe0c010 rep #0x20 and
-        #0x7f rtl
+    sep #0x20
+loop:
+    lda >0xe0c000
+    bpl loop
+    sta >0xe0c010
+    rep #0x20
+    and #0x7f
+    rtl
 }
+/* clang-format on */
 
 /* ORCA Console control codes */
 #define CURSOR_ON 0x05
@@ -139,7 +146,7 @@ asm int ReadKey(void) {
 int ReadInt(void) {
     unsigned i = 0;
     unsigned c;
-    unsigned rv;
+    unsigned rv = 0;
 
     putchar(CURSOR_ON);
     while (1) {
@@ -154,9 +161,12 @@ int ReadInt(void) {
             break;
         } else if ((c == 8) || (c == 0x7f)) {
             if (i) {
+                fputs("\x08 \x08", stdout);
+                /*
                 putchar(8);
                 putchar(' ');
                 putchar(8);
+                */
                 i--;
                 rv /= 10;
             }
@@ -182,8 +192,8 @@ void hexdump(const void *data, Word length) {
     Word x;
     static char text[17];
 
-    if (length > 16 * 320)
-        length = 16 * 320;
+    if (length > 16 * 16)
+        length = 16 * 16;
 
     for (i = 0, j = 0, x = 0; i < length; i++) {
 
@@ -202,7 +212,7 @@ void hexdump(const void *data, Word length) {
             buffer[j++] = 0;
             text[x++] = 0;
 
-            printf("%04x: %s%s\r", i - 15, buffer, text);
+            printf("%04x: %s%s\r", i & ~0x0f, buffer, text);
             j = 0;
             x = 0;
         }
@@ -214,8 +224,21 @@ void hexdump(const void *data, Word length) {
         buffer[j++] = 0;
         text[x++] = 0;
 
-        printf("%04x: %s%s\r", i - 15, buffer, text);
+        printf("%04x: %s%s\r", i  & ~0x0f, buffer, text);
     }
+}
+
+
+void print_tab(const char *name, unsigned len) {
+
+    static const char *underscore80 = 
+    "________________________________________"
+    "________________________________________";
+
+
+    printf("  %.*s\r", len + 2, underscore80);
+    printf("_/ %s \\", name);
+    printf("%.*s\r\r", 80 - len - 5, underscore80);
 }
 
 void DisplayQueue(Word which, const userRecord *rec) {
@@ -224,15 +247,17 @@ void DisplayQueue(Word which, const userRecord *rec) {
 
     putchar(0x0c);
     if (which == 'S') {
-        fputs("Send Queue\r\r");
+
+        print_tab("Send Queue", 10);
         h = (Handle)rec->uwTCPDataOut;
     } else {
-        fputs("Receive Queue\r\r");
+        print_tab("Receive Queue", 13);
         h = (Handle)rec->uwTCPDataIn;
     }
 
     if (h) {
         size = GetHandleSize(h);
+        printf("Size: $%04x\r\r", size);
         hexdump(*h, size);
     }
 }
@@ -241,10 +266,11 @@ void DisplayDP(void) {
 
     Word dp;
     putchar(0x0c);
-    fputs("Marinetti DP\r\r", stdout);
+
+    print_tab("Direct Page", 11);
 
     dp = TCPIPGetDP();
-    printf("Direct Page: $%04x\r", dp);
+    printf("Address: $%04x\r\r", dp);
     hexdump((void *)dp, 0x0100);
 }
 
@@ -258,7 +284,7 @@ void DisplayLinkLayer(void) {
     lv = TCPIPGetLinkVariables();
 
     putchar(0x0c);
-    fputs("Link Layer Status\r\r", stdout);
+    print_tab("Link Layer Status", 17);
 
     printf("MethodID:   $%04x\r", link.liMethodID);
     printf("Name:       %b\r", link.liName);
@@ -284,7 +310,7 @@ void DisplayTCP(void) {
     unsigned c;
 
     putchar(0x0c);
-    fputs("TCP Status\r\r", stdout);
+    print_tab("TCP Status", 10);
 
     // version
     VersionString(0, TCPIPLongVersion(), buffer);
@@ -314,39 +340,123 @@ void DisplayTCP(void) {
     printf("Login Count:    %d\r", TCPIPGetLoginCount());
 }
 
-unsigned DisplayIpid(unsigned ipid) {
+
+
+void DisplayIpid2(unsigned page, userRecord *rec) {
+
+    print_tab("User Record", 11);
+
+    if (page == 0) {
+        printf("  uwUserID: %04x\r", rec->uwUserID);
+        printf("  uwDestIP: %08lx\r", rec->uwDestIP);
+        printf("  uwDestPort: %04x\r", rec->uwDestPort);
+        printf("  uwIP_TOS: %04x\r", rec->uwIP_TOS);
+        printf("  uwIP_TTL: %04x\r", rec->uwIP_TTL);
+
+        printf("  uwSourcePort: %04x\r", rec->uwSourcePort);
+        printf("  uwLogoutPending: %04x\r", rec->uwLogoutPending);
+        printf("  uwICMPQueue: %08lx\r", rec->uwICMPQueue);
+        printf("  uwTCPQueue: %08lx\r", rec->uwTCPQueue);
+
+        printf("  uwTCPMaxSendSeg: %04x\r", rec->uwTCPMaxSendSeg);
+        printf("  uwTCPMaxReceiveSeg: %04x\r", rec->uwTCPMaxReceiveSeg);
+        printf("  uwTCPDataInQ: %08lx\r", rec->uwTCPDataInQ);
+        printf("  uwTCPDataIn: %08lx\r", rec->uwTCPDataIn);
+        printf("  uwTCPPushInFlag: %04x\r", rec->uwTCPPushInFlag);
+        printf("  uwTCPPushInOffset: %08lx\r", rec->uwTCPPushInOffset);
+        printf("  uwTCPPushOutFlag: %04x\r", rec->uwTCPPushOutFlag);
+        printf("  uwTCPPushOutSEQ: %08lx\r", rec->uwTCPPushOutSEQ);
+        printf("  uwTCPDataOut: %08lx\r", rec->uwTCPDataOut);
+
+        return;
+    }
+    if (page == 1) {
+        printf("  uwSND_UNA: %08lx\r", rec->uwSND_UNA);
+        printf("  uwSND_NXT: %08lx\r", rec->uwSND_NXT);
+        printf("  uwSND_WND: %04x\r", rec->uwSND_WND);
+        printf("  uwSND_UP: %04x\r", rec->uwSND_UP);
+        printf("  uwSND_WL1: %08lx\r", rec->uwSND_WL1);
+        printf("  uwSND_WL2: %08lx\r", rec->uwSND_WL2);
+        printf("  uwISS: %08lx\r", rec->uwISS);
+        printf("  uwRCV_NXT: %08lx\r", rec->uwRCV_NXT);
+        printf("  uwRCV_WND: %04x\r", rec->uwRCV_WND);
+        printf("  uwRCV_UP: %04x\r", rec->uwRCV_UP);
+        printf("  uwIRS: %08lx\r", rec->uwIRS);
+        printf("  uwTCP_State: %04x\r", rec->uwTCP_State);
+        printf("  uwTCP_StateTick: %08lx\r", rec->uwTCP_StateTick);
+        printf("  uwTCP_ErrCode: %04x\r", rec->uwTCP_ErrCode);
+        printf("  uwTCP_ICMPError: %04x\r", rec->uwTCP_ICMPError);
+        printf("  uwTCP_Server: %04x\r", rec->uwTCP_Server);
+        printf("  uwTCP_ChildList: %08lx\r", rec->uwTCP_ChildList);
+        printf("  uwTCP_ACKPending: %04x\r", rec->uwTCP_ACKPending);
+
+        return;
+    }
+    if (page == 2) {
+        printf("  uwTCP_ForceFIN: %04x\r", rec->uwTCP_ForceFIN);
+        printf("  uwTCP_FINSEQ: %08lx\r", rec->uwTCP_FINSEQ);
+        printf("  uwTCP_MyFINACKed: %04x\r", rec->uwTCP_MyFINACKed);
+        printf("  uwTCP_Timer: %08lx\r", rec->uwTCP_Timer);
+        printf("  uwTCP_TimerState: %04x\r", rec->uwTCP_TimerState);
+        printf("  uwTCP_rt_timer: %04x\r", rec->uwTCP_rt_timer);
+        printf("  uwTCP_2MSL_timer: %04x\r", rec->uwTCP_2MSL_timer);
+        printf("  uwTCP_SaveTTL: %04x\r", rec->uwTCP_SaveTTL);
+        printf("  uwTCP_SaveTOS: %04x\r", rec->uwTCP_SaveTOS);
+        printf("  uwTCP_TotalIN: %08lx\r", rec->uwTCP_TotalIN);
+        printf("  uwTCP_TotalOUT: %08lx\r", rec->uwTCP_TotalOUT);
+
+        printf("  uwUDP_Server : %04x\r", rec->uwUDP_Server);
+        printf("  uwUDPQueue : %08lx\r", rec->uwUDPQueue);
+        printf("  uwUDPError : %04x\r", rec->uwUDPError);
+        printf("  uwUDPErrorTick : %08lx\r", rec->uwUDPErrorTick);
+        printf("  uwUDPCount : %08lx\r", rec->uwUDPCount);
+
+        printf("  uwTriggers[0]: %08lx\r", rec->uwTriggers[0]);
+        printf("  uwSysTriggers[0]: %08lx\r", rec->uwSysTriggers[0]);
+    }
+}
+
+int DisplayIpid(unsigned ipid) {
     /* extended debug information */
 
-    enum { MAX_PAGE = 0; };
+    enum { MAX_PAGE = 4 };
     Handle h;
     Word size;
     unsigned page = 0;
     userRecord *rec;
     unsigned c;
 
-    putchar(0x0c);
-    printf("IPID: %d\r", ipid);
+
+    if ((ipid > 100) || (ipid & 0x01)) return -1;
 
     h = (Handle)TCPIPGetUserRecord(ipid);
-    if (_toolErr || !h) {
-        printf("\r\rInvalid PID");
-        ReadKey();
-        return;
-    }
+    if (_toolErr || !h) return -1;
+
     size = (Word)GetHandleSize(h);
     rec = (userRecord *)*h;
 
     for (;;) {
 
+        putchar(0x0c);
+
         switch (page) {
         case 0:
+        case 1:
+        case 2:
+            DisplayIpid2(page, rec);
+            break;
+        case 3:
+            DisplayQueue('R', rec);
+            break;
+        case 4:
+            DisplayQueue('S', rec);
             break;
         }
 
         for (;;) {
             c = ReadKey();
             if (c == 0x1b || c == 'Q' || c == 'q')
-                return;
+                return 0;
             if (c == LEFT) {
                 if (page == 0)
                     page = MAX_PAGE;
@@ -364,20 +474,6 @@ unsigned DisplayIpid(unsigned ipid) {
             SysBeep();
         }
     }
-}
-
-printf("Datagram count (all): %d\r", TCPIPGetDatagramCount(ipid, protocolAll));
-
-printf("Datagram count (icmp): %d\r",
-       TCPIPGetDatagramCount(ipid, protocolICMP));
-
-printf("Datagram count (tcp): %d\r", TCPIPGetDatagramCount(ipid, protocolTCP));
-
-printf("Datagram count (udp): %d\r", TCPIPGetDatagramCount(ipid, protocolUDP));
-
-printf("User statistic 1: $%08lx\r", TCPIPGetUserStatistic(ipid, 1));
-
-printf("User statistic 2: $%08lx\r", TCPIPGetUserStatistic(ipid, 2));
 }
 
 void DisplayIpids(void) {
@@ -417,6 +513,13 @@ void DisplayIpids(void) {
     }
 }
 
+/*
+putchar(30);
+putchar(32 + 0);
+putchar(32 + 23);
+putchar(29);
+*/
+#define status_line() fputs("\x1e\x20\x37\x1d", stdout)
 void DisplayMain(void) {
 
     enum { MAX_PAGE = 3 };
@@ -440,12 +543,8 @@ void DisplayMain(void) {
             break;
         }
 
-    /* DCA */
     menu:
-        putchar(30);
-        putchar(32 + 0);
-        putchar(32 + 23);
-        putchar(29); /* erase line */
+        status_line();
 
         if (page == 0) {
             fputs("Q: Quit I: Info", stdout);
@@ -472,17 +571,21 @@ void DisplayMain(void) {
                 break;
             }
             if (c == 'I' || c == 'i') {
-
-                putchar(30);
-                putchar(32 + 0);
-                putchar(32 + 23);
-                putchar(29); /* erase line */
+                int ok, ipid;
+                status_line();
                 fputs("ipid: ", stdout);
 
-                int ipid = ReadInt();
+                ipid = ReadInt();
                 if (ipid < 0)
                     goto menu;
-                DisplayIpid(ipid);
+                ok = DisplayIpid(ipid);
+                if (ok < 0) {
+                    status_line();
+                    SysBeep();
+                    fputs("Invalid ipid", stdout);
+                    ReadKey();
+                    goto menu;
+                }
                 break;
             }
             SysBeep();
