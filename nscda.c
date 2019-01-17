@@ -278,141 +278,139 @@ void DisplayLinkLayer(void) {
     static linkInfoBlk link;
     variablesPtr lv;
 
-    unsigned c;
-
     TCPIPGetLinkLayer(&link);
     lv = TCPIPGetLinkVariables();
 
     putchar(0x0c);
     print_tab("Link Layer Status", 17);
 
-    printf("MethodID:   $%04x\r", link.liMethodID);
-    printf("Name:       %b\r", link.liName);
+    printf("  MethodID:           $%04x\r", link.liMethodID);
+    printf("  Name:               %b\r", link.liName);
     VersionString(0, link.liVersion, buffer);
-    printf("Version:    %b\r", buffer);
-    printf("Flags:      $%04x\r", link.liFlags);
-    fputs("\r", stdout);
+    printf("  Version:            %b\r", buffer);
+    printf("  Flags:              $%04x\r", link.liFlags);
 
-    printf("Variables:\r");
-    printf("Version:    %d\r", lv->lvVersion);
-    printf("Connected:  $%04x\r", lv->lvConnected);
+    printf("\r  Variables:\r");
+
+    printf("  Version:            %d\r", lv->lvVersion);
+    printf("  Connected:          $%04x\r", lv->lvConnected);
     TCPIPConvertIPToASCII(lv->lvIPaddress, buffer, 0);
-    printf("IP Address: %b\r", buffer);
-    printf("RefCon:     $%08lx\r", lv->lvRefCon);
-    printf("Errors:     $%08lx\r", lv->lvErrors);
-    printf("MTU:        %d\r", lv->lvMTU);
+    printf("  IP Address:         %b\r", buffer);
+    printf("  RefCon:             $%08lx\r", lv->lvRefCon);
+    printf("  Errors:             $%08lx\r", lv->lvErrors);
+    printf("  MTU:                %d\r", lv->lvMTU);
 }
 
 void DisplayTCP(void) {
 
     static DNSRec dns;
     Long l;
-    unsigned c;
 
     putchar(0x0c);
     print_tab("TCP Status", 10);
 
     // version
     VersionString(0, TCPIPLongVersion(), buffer);
-    printf("Version:        %b\r", buffer);
-    printf("Connect Status: $%04x\r", TCPIPGetConnectStatus());
+    printf("  Version:            %b\r", buffer);
+    printf("  Connect Status:     $%04x\r", TCPIPGetConnectStatus());
 
     // ip address
     l = TCPIPGetMyIPAddress();
     TCPIPConvertIPToASCII(l, buffer, 0);
-    printf("IP Address:     %b\r", buffer);
+    printf("  IP Address:         %b\r", buffer);
 
     // dns
     TCPIPGetDNS(&dns);
     TCPIPConvertIPToASCII(dns.DNSMain, buffer, 0);
-    printf("DNS 1:          %b\r", buffer);
+    printf("  DNS 1:              %b\r", buffer);
     TCPIPConvertIPToASCII(dns.DNSAux, buffer, 0);
-    printf("DNS 2:          %b\r", buffer);
+    printf("  DNS 2:              %b\r", buffer);
 
     // hostname
     TCPIPGetHostName((hnBuffPtr)buffer);
-    printf("Hostname:       %b\r", buffer);
+    printf("  Hostname:           %b\r", buffer);
 
     // mtu
-    printf("MTU:            %d\r", TCPIPGetMTU());
-    printf("Alive Flag:     $%04x\r", TCPIPGetAliveFlag());
-    printf("Alive Minutes:  %d\r", TCPIPGetAliveMinutes());
-    printf("Login Count:    %d\r", TCPIPGetLoginCount());
+    printf("  MTU:                %d\r", TCPIPGetMTU());
+    printf("  Alive Flag:         $%04x\r", TCPIPGetAliveFlag());
+    printf("  Alive Minutes:      %d\r", TCPIPGetAliveMinutes());
+    printf("  Login Count:        %d\r", TCPIPGetLoginCount());
 }
 
 
 
 void DisplayIpid2(unsigned page, userRecord *rec) {
-
     print_tab("User Record", 11);
 
     if (page == 0) {
-        printf("  uwUserID: %04x\r", rec->uwUserID);
-        printf("  uwDestIP: %08lx\r", rec->uwDestIP);
-        printf("  uwDestPort: %04x\r", rec->uwDestPort);
-        printf("  uwIP_TOS: %04x\r", rec->uwIP_TOS);
-        printf("  uwIP_TTL: %04x\r", rec->uwIP_TTL);
+        TCPIPConvertIPToASCII(rec->uwDestIP, buffer, 0);
 
-        printf("  uwSourcePort: %04x\r", rec->uwSourcePort);
-        printf("  uwLogoutPending: %04x\r", rec->uwLogoutPending);
-        printf("  uwICMPQueue: %08lx\r", rec->uwICMPQueue);
-        printf("  uwTCPQueue: %08lx\r", rec->uwTCPQueue);
+        printf("  uwUserID:           $%04x\r", rec->uwUserID);
+        printf("  uwDestIP:           $%08lx (%b)\r", rec->uwDestIP, buffer);
+        printf("  uwDestPort:         $%04x (%u)\r", rec->uwDestPort, rec->uwDestPort);
+        printf("  uwIP_TOS:           $%04x\r", rec->uwIP_TOS);
+        printf("  uwIP_TTL:           $%04x\r", rec->uwIP_TTL);
 
-        printf("  uwTCPMaxSendSeg: %04x\r", rec->uwTCPMaxSendSeg);
-        printf("  uwTCPMaxReceiveSeg: %04x\r", rec->uwTCPMaxReceiveSeg);
-        printf("  uwTCPDataInQ: %08lx\r", rec->uwTCPDataInQ);
-        printf("  uwTCPDataIn: %08lx\r", rec->uwTCPDataIn);
-        printf("  uwTCPPushInFlag: %04x\r", rec->uwTCPPushInFlag);
-        printf("  uwTCPPushInOffset: %08lx\r", rec->uwTCPPushInOffset);
-        printf("  uwTCPPushOutFlag: %04x\r", rec->uwTCPPushOutFlag);
-        printf("  uwTCPPushOutSEQ: %08lx\r", rec->uwTCPPushOutSEQ);
-        printf("  uwTCPDataOut: %08lx\r", rec->uwTCPDataOut);
+        printf("  uwSourcePort:       $%04x (%u)\r", rec->uwSourcePort, rec->uwSourcePort);
+        printf("  uwLogoutPending:    $%04x\r", rec->uwLogoutPending);
+        printf("  uwICMPQueue:        $%08lx\r", rec->uwICMPQueue);
+        printf("  uwTCPQueue:         $%08lx\r", rec->uwTCPQueue);
+
+        printf("  uwTCPMaxSendSeg:    $%04x\r", rec->uwTCPMaxSendSeg);
+        printf("  uwTCPMaxReceiveSeg: $%04x\r", rec->uwTCPMaxReceiveSeg);
+        printf("  uwTCPDataInQ:       $%08lx\r", rec->uwTCPDataInQ);
+        printf("  uwTCPDataIn:        $%08lx\r", rec->uwTCPDataIn);
+        printf("  uwTCPPushInFlag:    $%04x\r", rec->uwTCPPushInFlag);
+        printf("  uwTCPPushInOffset:  $%08lx\r", rec->uwTCPPushInOffset);
+        printf("  uwTCPPushOutFlag:   $%04x\r", rec->uwTCPPushOutFlag);
+        printf("  uwTCPPushOutSEQ:    $%08lx\r", rec->uwTCPPushOutSEQ);
+        printf("  uwTCPDataOut:       $%08lx\r", rec->uwTCPDataOut);
 
         return;
     }
     if (page == 1) {
-        printf("  uwSND_UNA: %08lx\r", rec->uwSND_UNA);
-        printf("  uwSND_NXT: %08lx\r", rec->uwSND_NXT);
-        printf("  uwSND_WND: %04x\r", rec->uwSND_WND);
-        printf("  uwSND_UP: %04x\r", rec->uwSND_UP);
-        printf("  uwSND_WL1: %08lx\r", rec->uwSND_WL1);
-        printf("  uwSND_WL2: %08lx\r", rec->uwSND_WL2);
-        printf("  uwISS: %08lx\r", rec->uwISS);
-        printf("  uwRCV_NXT: %08lx\r", rec->uwRCV_NXT);
-        printf("  uwRCV_WND: %04x\r", rec->uwRCV_WND);
-        printf("  uwRCV_UP: %04x\r", rec->uwRCV_UP);
-        printf("  uwIRS: %08lx\r", rec->uwIRS);
-        printf("  uwTCP_State: %04x\r", rec->uwTCP_State);
-        printf("  uwTCP_StateTick: %08lx\r", rec->uwTCP_StateTick);
-        printf("  uwTCP_ErrCode: %04x\r", rec->uwTCP_ErrCode);
-        printf("  uwTCP_ICMPError: %04x\r", rec->uwTCP_ICMPError);
-        printf("  uwTCP_Server: %04x\r", rec->uwTCP_Server);
-        printf("  uwTCP_ChildList: %08lx\r", rec->uwTCP_ChildList);
-        printf("  uwTCP_ACKPending: %04x\r", rec->uwTCP_ACKPending);
+        printf("  uwSND_UNA:          $%08lx\r", rec->uwSND_UNA);
+        printf("  uwSND_NXT:          $%08lx\r", rec->uwSND_NXT);
+        printf("  uwSND_WND:          $%04x\r", rec->uwSND_WND);
+        printf("  uwSND_UP:           $%04x\r", rec->uwSND_UP);
+        printf("  uwSND_WL1:          $%08lx\r", rec->uwSND_WL1);
+        printf("  uwSND_WL2:          $%08lx\r", rec->uwSND_WL2);
+        printf("  uwISS:              $%08lx\r", rec->uwISS);
+        printf("  uwRCV_NXT:          $%08lx\r", rec->uwRCV_NXT);
+        printf("  uwRCV_WND:          $%04x\r", rec->uwRCV_WND);
+        printf("  uwRCV_UP:           $%04x\r", rec->uwRCV_UP);
+        printf("  uwIRS:              $%08lx\r", rec->uwIRS);
+        printf("  uwTCP_State:        $%04x\r", rec->uwTCP_State);
+        printf("  uwTCP_StateTick:    $%08lx\r", rec->uwTCP_StateTick);
+        printf("  uwTCP_ErrCode:      $%04x\r", rec->uwTCP_ErrCode);
+        printf("  uwTCP_ICMPError:    $%04x\r", rec->uwTCP_ICMPError);
+        printf("  uwTCP_Server:       $%04x\r", rec->uwTCP_Server);
+        printf("  uwTCP_ChildList:    $%08lx\r", rec->uwTCP_ChildList);
+        printf("  uwTCP_ACKPending:   $%04x\r", rec->uwTCP_ACKPending);
 
         return;
     }
     if (page == 2) {
-        printf("  uwTCP_ForceFIN: %04x\r", rec->uwTCP_ForceFIN);
-        printf("  uwTCP_FINSEQ: %08lx\r", rec->uwTCP_FINSEQ);
-        printf("  uwTCP_MyFINACKed: %04x\r", rec->uwTCP_MyFINACKed);
-        printf("  uwTCP_Timer: %08lx\r", rec->uwTCP_Timer);
-        printf("  uwTCP_TimerState: %04x\r", rec->uwTCP_TimerState);
-        printf("  uwTCP_rt_timer: %04x\r", rec->uwTCP_rt_timer);
-        printf("  uwTCP_2MSL_timer: %04x\r", rec->uwTCP_2MSL_timer);
-        printf("  uwTCP_SaveTTL: %04x\r", rec->uwTCP_SaveTTL);
-        printf("  uwTCP_SaveTOS: %04x\r", rec->uwTCP_SaveTOS);
-        printf("  uwTCP_TotalIN: %08lx\r", rec->uwTCP_TotalIN);
-        printf("  uwTCP_TotalOUT: %08lx\r", rec->uwTCP_TotalOUT);
+        printf("  uwTCP_ForceFIN:     $%04x\r", rec->uwTCP_ForceFIN);
+        printf("  uwTCP_FINSEQ:       $%08lx\r", rec->uwTCP_FINSEQ);
+        printf("  uwTCP_MyFINACKed:   $%04x\r", rec->uwTCP_MyFINACKed);
+        printf("  uwTCP_Timer:        $%08lx\r", rec->uwTCP_Timer);
+        printf("  uwTCP_TimerState:   $%04x\r", rec->uwTCP_TimerState);
+        printf("  uwTCP_rt_timer:     $%04x\r", rec->uwTCP_rt_timer);
+        printf("  uwTCP_2MSL_timer:   $%04x\r", rec->uwTCP_2MSL_timer);
+        printf("  uwTCP_SaveTTL:      $%04x\r", rec->uwTCP_SaveTTL);
+        printf("  uwTCP_SaveTOS:      $%04x\r", rec->uwTCP_SaveTOS);
+        printf("  uwTCP_TotalIN:      $%08lx\r", rec->uwTCP_TotalIN);
+        printf("  uwTCP_TotalOUT:     $%08lx\r", rec->uwTCP_TotalOUT);
 
-        printf("  uwUDP_Server : %04x\r", rec->uwUDP_Server);
-        printf("  uwUDPQueue : %08lx\r", rec->uwUDPQueue);
-        printf("  uwUDPError : %04x\r", rec->uwUDPError);
-        printf("  uwUDPErrorTick : %08lx\r", rec->uwUDPErrorTick);
-        printf("  uwUDPCount : %08lx\r", rec->uwUDPCount);
+        printf("  uwUDP_Server:       $%04x\r", rec->uwUDP_Server);
+        printf("  uwUDPQueue:         $%08lx\r", rec->uwUDPQueue);
+        printf("  uwUDPError:         $%04x\r", rec->uwUDPError);
+        printf("  uwUDPErrorTick:     $%08lx\r", rec->uwUDPErrorTick);
+        printf("  uwUDPCount:         $%08lx\r", rec->uwUDPCount);
 
-        printf("  uwTriggers[0]: %08lx\r", rec->uwTriggers[0]);
-        printf("  uwSysTriggers[0]: %08lx\r", rec->uwSysTriggers[0]);
+        printf("  uwTriggers[0]:      $%08lx\r", rec->uwTriggers[0]);
+        printf("  uwSysTriggers[0]:   $%08lx\r", rec->uwSysTriggers[0]);
     }
 }
 
