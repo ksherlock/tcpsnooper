@@ -31,17 +31,16 @@
 # Kelvin's modified Orca C library includes an implementation of fdprintf()
 
 CFLAGS	+=  $(DEFINES) -v #-O
-LDLIBS += -l liborca
 
 netstat: netstat.o
-	$(CC) $(LDFLAGS) netstat.o $(LDLIBS) -o $@
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-tcpsnooper.cda: cda.o nscda.o debug.o
-	$(CC) $(LDFLAGS) cda.o nscda.o debug.o $(LDLIBS) -o $@
+tcpsnooper.cda: snooper.o
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 	chtyp -t cda $@
 
 clean:
 	$(RM) *.o *.root *.r
 
 clobber: clean
-	$(RM) -f netstat netstat.cda
+	$(RM) -f netstat tcpsnooper
