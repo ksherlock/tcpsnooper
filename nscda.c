@@ -35,10 +35,13 @@
 
 #include <misctool.h>
 #include <texttool.h>
+#include <memory.h>
 
+#include <ctype.h>
 #include <stdio.h>
 
-extern void debug(void);
+static char buffer[80];
+
 
 const char Header1[] =
     " Ipid State       Address         sPort dPort RcvQueue  SendQueue\r";
@@ -130,9 +133,11 @@ asm int ReadKey(void) {
 /* ORCA Console control codes */
 #define CURSOR_ON 0x05
 #define CURSOR_OFF 0x06
+#define CLEAR_EOL 29
+#define CLEAR_EOS 11
 
 /* cursor keys */
-#define LEFT 0x80
+#define LEFT 0x08
 #define RIGHT 0x15
 #define UP 0x0b
 #define DOWN 0x0a
@@ -167,14 +172,74 @@ int ReadInt(void) {
         i++;
         rv *= 10;
         rv += c - '0';
+        continue;
       }
-      else SysBeep();
     }
+    SysBeep();
   }
   putchar(CURSOR_OFF);
   return rv;
 }
-static char buffer[80];
+
+
+void hexdump(const void *data, Word length)
+{
+Word i;
+Word j;
+Word k;
+Word x;
+  static char text[17];
+
+  if (length > 16 * 320) length = 16 * 320;
+
+  for (i = 0, j = 0, x = 0; i < length; i++)
+  {
+
+    k = ((unsigned char *)data)[i];
+    buffer[j++] = "0123456789abcdef"[k >> 4];
+    buffer[j++] = "0123456789abcdef"[k & 0x0f];
+    buffer[j++] = ' ';
+
+    text[x++] = isprint(k) ? k : '.'; 
+
+    if ((i & 0x0f) == 0x07)  buffer[j++] = ' ';
+
+    if ((i & 0x0f) == 0x0f)
+    {
+      buffer[j++] = ' ';
+      buffer[j++] = 0;
+      text[x++] = 0;
+
+      printf("%04x: %s%s\r", i - 15, buffer, text);
+      j = 0;
+      x = 0;
+    }
+  }
+
+  if (i & 0x0f)
+  {
+    while (j < 52) buffer[j++] = ' ';
+    buffer[j++] = 0;
+    text[x++] = 0;
+
+    printf("%04x: %s%s\r", i - 15, buffer, text);
+  }
+
+}
+
+
+void DisplayDP(void) {
+
+  Word dp;
+  putchar(0x0c);
+  fputs("Marinetti DP\r\r", stdout);
+
+  dp = TCPIPGetDP();
+  printf("Direct Page: $%04x\r", dp);
+  hexdump((void *)dp, 0x0100);
+}
+
+
 
 void DisplayLinkLayer(void) {
   static linkInfoBlk link;
@@ -183,28 +248,27 @@ void DisplayLinkLayer(void) {
   unsigned c;
 
   TCPIPGetLinkLayer(&link);
-
-  //WriteChar(0x0c);
-  putchar(0x0c);
-
-  printf("Link Layer:\r");
-  printf("  MethodID:   $%04x\r", link.liMethodID);
-  printf("  Name:       %b\r", link.liName);
-  VersionString(0, link.liVersion, buffer);
-  printf("  Version:    %b\r", buffer);
-  printf("  Flags:      $%04x\r", link.liFlags);
-  fputs("\r", stdout);
   lv = TCPIPGetLinkVariables();
-  printf("Link Variables\r");
-  printf("  Version:    %d\r", lv->lvVersion);
-  printf("  Connected:  $%04x\r", lv->lvConnected);
-  TCPIPConvertIPToASCII(lv->lvIPaddress, buffer, 0);
-  printf("  IP Address: %b\r", buffer);
-  printf("  RefCon:     $%08lx\r", lv->lvRefCon);
-  printf("  Errors:     $%08lx\r", lv->lvErrors);
-  printf("  MTU:        %d\r", lv->lvMTU);
 
-  ReadKey();
+  putchar(0x0c);
+  fputs("Link Layer Status\r\r", stdout);
+
+  printf("MethodID:   $%04x\r", link.liMethodID);
+  printf("Name:       %b\r", link.liName);
+  VersionString(0, link.liVersion, buffer);
+  printf("Version:    %b\r", buffer);
+  printf("Flags:      $%04x\r", link.liFlags);
+  fputs("\r", stdout);
+
+  printf("Variables:\r");
+  printf("Version:    %d\r", lv->lvVersion);
+  printf("Connected:  $%04x\r", lv->lvConnected);
+  TCPIPConvertIPToASCII(lv->lvIPaddress, buffer, 0);
+  printf("IP Address: %b\r", buffer);
+  printf("RefCon:     $%08lx\r", lv->lvRefCon);
+  printf("Errors:     $%08lx\r", lv->lvErrors);
+  printf("MTU:        %d\r", lv->lvMTU);
+
 }
 
 void DisplayTCP(void) {
@@ -212,8 +276,9 @@ void DisplayTCP(void) {
   static DNSRec dns;
   Long l;
   unsigned c;
-  WriteChar(0x0c);
+
   putchar(0x0c);
+  fputs("TCP Status\r\r", stdout);
 
   // version
   VersionString(0, TCPIPLongVersion(), buffer);
@@ -242,7 +307,6 @@ void DisplayTCP(void) {
   printf("Alive Minutes:  %d\r", TCPIPGetAliveMinutes());
   printf("Login Count:    %d\r", TCPIPGetLoginCount());
 
-  ReadKey();
 }
 
 unsigned DisplayIpid(unsigned ipid) {
@@ -278,29 +342,28 @@ unsigned DisplayIpid(unsigned ipid) {
     printf("User statistic 2: $%08lx\r",
       TCPIPGetUserStatistic(ipid, 2));
 
-    GetKey();
 }
 
-unsigned DisplayMain(void) {
-  Word count;
+void DisplayIpids(void) {
 
   static srBuff srBuffer;
 
-  Word line = 0;
-  Word ipid;
-  char c;
-
-  ipid = 0;
-  count = TCPIPGetLoginCount();
-
-redraw:
+  unsigned ipid;
+  unsigned line;
+  unsigned count;
 
   putchar(0x0c);
   fputs(Header1, stdout);
   fputs(Header2, stdout);
 
   line = 2;
-  for (; count && ipid < 100; ipid += 2) {
+  count = TCPIPGetLoginCount();
+
+  if (!count) return;
+  /* in theory, there could be 50 ipids.  */
+  /* 20 ought to be enough */
+
+  for (ipid = 0; ipid < 100; ipid += 2) {
 
     TCPIPStatusTCP(ipid, &srBuffer);
     if (_toolErr)
@@ -310,101 +373,93 @@ redraw:
 
     --count;
     ++line;
-    if (line == 24) {
-      fputs("-- more --", stdout);
+    if (count == 0) return;
+    if (line == 23) return;
+  }
+}
+
+void DisplayMain(void) {
+
+  enum {
+    MAX_PAGE = 3
+  };
+  char c;
+  unsigned page = 0;
+
+  for(;;) {
+
+    switch (page) {
+      case 0:
+        DisplayIpids();
+        break;
+      case 1:
+        DisplayTCP();
+        break;
+      case 2:
+        DisplayLinkLayer();
+        break;
+      case 3:
+        DisplayDP();
+        break;
+    }
+
+    /* DCA */
+    menu:
+    putchar(30);
+    putchar(32 + 0);
+    putchar(32 + 23);
+    putchar(29); /* erase line */
+
+    if (page == 0) {
+      fputs("Q: Quit I: Info", stdout);
+    } else {
+      fputs("Q: Quit", stdout);
+    }
+
+    for(;;) {
       c = ReadKey();
-      if (c == 'Q' || c == 'q' || c == 0x1b)
-        return 0;
-      goto redraw;
-    }
-  }
+      if (c == 'Q' || c == 'q' || c == ESC) return;
+      if (c == LEFT) {
+        if (page == 0) page = MAX_PAGE;
+        else --page;
+        break;
+      }
+      if (c == RIGHT) {
+        if (page == MAX_PAGE) page = 0;
+        else ++page;
+        break;
+      }
+      if (c == 'I' || c == 'i') {
 
-  while (line < 23) {
-    putchar('\r');
-    ++line;
-  }
+        putchar(30);
+        putchar(32 + 0);
+        putchar(32 + 23);
+        putchar(29); /* erase line */
+        fputs("ipid: ", stdout);
 
-  fputs("Q: Quit.  D: Save debug file T: TCP Status L: Link Layer status", stdout);
-  for (;;) {
-    c = ReadKey();
-    switch (c) {
-    case 'q':
-    case 'Q':
-    case 0x1b:
-      return 0;
-    case 'D':
-    case 'd':
-      // debug();
-      return 1;
-    case 'T':
-    case 't':
-      DisplayTCP();
-      return 1;
-    case 'L':
-    case 'l':
-      DisplayLinkLayer();
-      return 1;
-    case ' ':
-      goto redraw;
-      break;
-    case 'I':
-    case 'i':
-      /* sigh... \r is also a line feed. */
-      /* reverse line feed first to negate it. */
-      putchar(31);
-      putchar('\r');
-      putchar(29);
-      fputs("IPID: ", stdout);
-      c = ReadInt();
-      if ((int)c >= 0) DisplayIpid(c);
-      return 1;
+        int ipid = ReadInt();
+        if (ipid < 0) goto menu;
+        DisplayIpid(ipid);
+        break;
+      }
+      SysBeep();
     }
   }
 }
 
-DeviceRec device_in;
-DeviceRec device_out;
-Long globals_in;
-Long globals_out;
 
-void StartTT(void) {
-  device_in = GetInputDevice();
-  globals_in = GetInGlobals();
-  device_out = GetOutputDevice();
-  globals_out = GetOutGlobals();
 
-  SetInputDevice(0, 3);
-  SetOutputDevice(0, 3);
-  SetInGlobals(0x7f, 0x00);
-  SetOutGlobals(0xff, 0x80);
-
-  InitTextDev(0);
-  InitTextDev(1);
-}
-void StopTT(void) {
-  SetInputDevice(device_in.deviceType, device_in.ptrOrSlot);
-  SetInGlobals(globals_in >> 16, globals_in);
-
-  SetOutputDevice(device_out.deviceType, device_out.ptrOrSlot);
-  SetOutGlobals(globals_out >> 16, globals_out);
-
-  InitTextDev(0);
-  InitTextDev(1);
-}
 
 void StartUp(void) {
-  //StartTT();
   putchar(CURSOR_OFF); /* turn off cursor */
 
   if (TCPIPStatus() == 0 || _toolErr) {
     fputs("Marinetti is not active", stdout);
     ReadKey();
-  } else {
-    while (DisplayMain()) /* */
-      ;
+    return;
   }
-
-  //StopTT();
+  DisplayMain();
 }
 
-void ShutDown(void) {}
+void ShutDown(void) {
+}
