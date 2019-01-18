@@ -224,13 +224,21 @@ void hexdump(const void *data, Word length) {
         buffer[j++] = 0;
         text[x++] = 0;
 
-        printf("%04x: %s%s\r", i  & ~0x0f, buffer, text);
+        printf("%04x: %s%s\r", i & ~0x0f, buffer, text);
     }
 }
 
-
 void print_tab(const char *name, unsigned len) {
 
+    putchar(0x0c);
+    putchar(30);
+    putchar(32 + ((80 - len) >> 1));
+    putchar(32 + 0);
+    fputs(name, stdout);
+    putchar('\r');
+    putchar('\r');
+
+#if 0
     static const char *underscore80 = 
     "________________________________________"
     "________________________________________";
@@ -239,33 +247,32 @@ void print_tab(const char *name, unsigned len) {
     printf("  %.*s\r", len + 2, underscore80);
     printf("_/ %s \\", name);
     printf("%.*s\r\r", 80 - len - 5, underscore80);
+#endif
 }
 
-void DisplayQueue(Word which, const userRecord *rec) {
-    Handle h;
+void dump_handle(Handle h) {
     Word size;
+    void *address;
 
-    putchar(0x0c);
-    if (which == 'S') {
+    address = 0;
+    size = 0;
 
-        print_tab("Send Queue", 10);
-        h = (Handle)rec->uwTCPDataOut;
-    } else {
-        print_tab("Receive Queue", 13);
-        h = (Handle)rec->uwTCPDataIn;
-    }
+    printf("  Handle: $%08lx Address: $%08lx Size: $%04x\r\r", (LongWord)h,
+           (LongWord)address, size);
 
     if (h) {
         size = GetHandleSize(h);
-        printf("Size: $%04x\r\r", size);
-        hexdump(*h, size);
+        address = *(void **)h;
+    }
+
+    if (size) {
+        hexdump(address, size);
     }
 }
 
 void DisplayDP(void) {
 
     Word dp;
-    putchar(0x0c);
 
     print_tab("Direct Page", 11);
 
@@ -281,7 +288,6 @@ void DisplayLinkLayer(void) {
     TCPIPGetLinkLayer(&link);
     lv = TCPIPGetLinkVariables();
 
-    putchar(0x0c);
     print_tab("Link Layer Status", 17);
 
     printf("  MethodID:           $%04x\r", link.liMethodID);
@@ -306,7 +312,6 @@ void DisplayTCP(void) {
     static DNSRec dns;
     Long l;
 
-    putchar(0x0c);
     print_tab("TCP Status", 10);
 
     // version
@@ -337,9 +342,8 @@ void DisplayTCP(void) {
     printf("  Login Count:        %d\r", TCPIPGetLoginCount());
 }
 
-
-
 void DisplayIpid2(unsigned page, userRecord *rec) {
+
     print_tab("User Record", 11);
 
     if (page == 0) {
@@ -347,11 +351,13 @@ void DisplayIpid2(unsigned page, userRecord *rec) {
 
         printf("  uwUserID:           $%04x\r", rec->uwUserID);
         printf("  uwDestIP:           $%08lx (%b)\r", rec->uwDestIP, buffer);
-        printf("  uwDestPort:         $%04x (%u)\r", rec->uwDestPort, rec->uwDestPort);
+        printf("  uwDestPort:         $%04x (%u)\r", rec->uwDestPort,
+               rec->uwDestPort);
         printf("  uwIP_TOS:           $%04x\r", rec->uwIP_TOS);
         printf("  uwIP_TTL:           $%04x\r", rec->uwIP_TTL);
 
-        printf("  uwSourcePort:       $%04x (%u)\r", rec->uwSourcePort, rec->uwSourcePort);
+        printf("  uwSourcePort:       $%04x (%u)\r", rec->uwSourcePort,
+               rec->uwSourcePort);
         printf("  uwLogoutPending:    $%04x\r", rec->uwLogoutPending);
         printf("  uwICMPQueue:        $%08lx\r", rec->uwICMPQueue);
         printf("  uwTCPQueue:         $%08lx\r", rec->uwTCPQueue);
@@ -417,25 +423,24 @@ void DisplayIpid2(unsigned page, userRecord *rec) {
 int DisplayIpid(unsigned ipid) {
     /* extended debug information */
 
-    enum { MAX_PAGE = 4 };
+    enum { MAX_PAGE = 8 };
     Handle h;
     Word size;
     unsigned page = 0;
     userRecord *rec;
     unsigned c;
 
-
-    if ((ipid > 100) || (ipid & 0x01)) return -1;
+    if ((ipid > 100) || (ipid & 0x01))
+        return -1;
 
     h = (Handle)TCPIPGetUserRecord(ipid);
-    if (_toolErr || !h) return -1;
+    if (_toolErr || !h)
+        return -1;
 
     size = (Word)GetHandleSize(h);
     rec = (userRecord *)*h;
 
     for (;;) {
-
-        putchar(0x0c);
 
         switch (page) {
         case 0:
@@ -444,10 +449,28 @@ int DisplayIpid(unsigned ipid) {
             DisplayIpid2(page, rec);
             break;
         case 3:
-            DisplayQueue('R', rec);
+            print_tab("TCP Data In", 11);
+            dump_handle((Handle)rec->uwTCPDataIn);
             break;
         case 4:
-            DisplayQueue('S', rec);
+            print_tab("TCP Data Out", 12);
+            dump_handle((Handle)rec->uwTCPDataOut);
+            break;
+        case 5:
+            print_tab("ICMP Queue", 10);
+            dump_handle((Handle)rec->uwICMPQueue);
+            break;
+        case 6:
+            print_tab("TCP Queue", 9);
+            dump_handle((Handle)rec->uwTCPQueue);
+            break;
+        case 7:
+            print_tab("TCP Data In Queue", 17);
+            dump_handle((Handle)rec->uwTCPDataInQ);
+            break;
+        case 8:
+            print_tab("UDP Queue", 9);
+            dump_handle((Handle)rec->uwUDPQueue);
             break;
         }
 
@@ -511,6 +534,98 @@ void DisplayIpids(void) {
     }
 }
 
+void DisplayTuning(void) {
+
+    /* clang-format off */
+    static char *tuneStrings[] = {
+        "COUNT:             ",
+        "IP USER POLL CT:   ",
+        "IP RUNQ FREQ:      ",
+        "IP RUNQ CT:        ",
+        "TCP USER POLL:     "
+    };
+    /* clang-format on */
+
+    static Word tune[5];
+
+    unsigned count;
+    unsigned i;
+
+    print_tab("Tuning", 6);
+
+    TCPIPGetTuningTable((tunePtr)tune);
+    count = tune[0] >> 1;
+    if (count > sizeof(tuneStrings) / 4)
+        count = sizeof(tuneStrings) / 4;
+    for (i = 1; i < count; i++) {
+        printf("  %s %u\r", tuneStrings[i], tune[i]);
+    }
+}
+
+void DisplayErrors(void) {
+
+    /* clang-format off */
+    static char *errStrings[] =
+    {
+        "TBLEN:                     ",
+        "TOTAL:                     ",
+        "FRAGS IN:                  ",
+        "FRAGS LOST:                ",
+        "BUILT:                     ",
+        "OK:                        ",
+        "BAD CHK:                   ",
+        "BAD HEADLEN:               ",
+        "BAD PROTO:                 ",
+        "BAD IP:                    ",
+        "ICMP:                      ",
+        "ICMP USER:                 ",
+        "ICMP KERNEL:               ",
+        "ICMP BAD:                  ",
+        "ICMP BAD TYPE:             ",
+        "ICMP BAD CODE:             ",
+        "ICMP ECHO RQ:              ",
+        "ICMP ECHO RQ OUT:          ",
+        "ICMP ECHO RP:              ",
+        "ICMP ECHO RP BAD ID:       ",
+        "UDP:                       ",
+        "UDP BAD:                   ",
+        "UDP NOPORT:                ",
+        "TCP:                       ",
+        "TCP BAD:                   ",
+        "TCP NOPORT:                ",
+        "TCP QUEUED:                ",
+        "TCP OLD:                   ",
+        "OFRAGMENTS:                ",
+        "FRAGMENTED:                "
+    };
+    /* clang-format on */
+ 
+    LongWord *ptr;
+    unsigned count;
+    unsigned i;
+
+    print_tab("Error Table", 11);
+
+    ptr = (LongWord *)TCPIPGetErrorTable();
+    if (!ptr) return;
+
+    count = ptr[0] >> 2;
+    if (count > sizeof(errStrings) / sizeof(errStrings[0]))
+        count = sizeof(errStrings) / sizeof(errStrings[0]);
+
+    if (count == 0) /* marinetti bug */
+        count = sizeof(errStrings) / sizeof(errStrings[0]);
+
+    for (i = 1; i < count; ++i) {
+
+        printf("  %s %-9lu", errStrings[i], ptr[i]);
+
+        if (!(i & 0x01)) putchar('\r');
+        else putchar(' ');
+    }
+    putchar('\r');
+}
+
 /*
 putchar(30);
 putchar(32 + 0);
@@ -520,7 +635,7 @@ putchar(29);
 #define status_line() fputs("\x1e\x20\x37\x1d", stdout)
 void DisplayMain(void) {
 
-    enum { MAX_PAGE = 3 };
+    enum { MAX_PAGE = 5 };
     char c;
     unsigned page = 0;
 
@@ -537,6 +652,12 @@ void DisplayMain(void) {
             DisplayLinkLayer();
             break;
         case 3:
+            DisplayErrors();
+            break;
+        case 4:
+            DisplayTuning();
+            break;
+        case 5:
             DisplayDP();
             break;
         }
