@@ -257,13 +257,14 @@ void dump_handle(Handle h) {
     address = 0;
     size = 0;
 
-    printf("  Handle: $%08lx Address: $%08lx Size: $%04x\r\r", (LongWord)h,
-           (LongWord)address, size);
-
     if (h) {
         size = GetHandleSize(h);
         address = *(void **)h;
     }
+
+    printf("  Handle: $%08lx Address: $%08lx Size: $%04x\r\r", (LongWord)h,
+           (LongWord)address, size);
+
 
     if (size) {
         hexdump(address, size);
