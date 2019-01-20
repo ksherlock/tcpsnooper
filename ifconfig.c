@@ -13,7 +13,9 @@
  * callback by Marinetti to display a connect message
  *
  */
+#pragma databank 1
 void display(const char *pstr) { WriteLine(pstr); }
+#pragma databank 0
 
 // todo - support flags
 // -s: be silent (ie - no output, return value only
