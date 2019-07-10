@@ -82,7 +82,7 @@ static char *stateStr =
 "LASTACK     "
 "CLOSING     "
 "TIMEWAIT    "
-"UNKOWN      ";
+"UNKNOWN     ";
 
 static destRec dest;
 

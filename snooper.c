@@ -69,7 +69,7 @@ void Display(Word ipid, srBuff *srBuffer) {
                             "LASTACK     "
                             "CLOSING     "
                             "TIMEWAIT    "
-                            "UNKOWN      ";
+                            "UNKNOWN     ";
 
     static destRec dest;
 
