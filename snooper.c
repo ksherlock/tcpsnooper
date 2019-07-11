@@ -378,7 +378,15 @@ void DisplayIpid2(unsigned page, userRecord *rec) {
         "TIMEWAIT",
     };
 
-    unsigned x;
+    static char *timer_states[] = {
+        "OFF",
+        "SYN",
+        "DATA",
+        "2MSL",
+        "SYNACK",
+    };
+
+    unsigned x,y;
 
     print_tab("User Record", 11);
 
@@ -448,7 +456,16 @@ void DisplayIpid2(unsigned page, userRecord *rec) {
         printf("  uwTCP_FINSEQ:       $%08lx\r", rec->uwTCP_FINSEQ);
         printf("  uwTCP_MyFINACKed:   $%04x\r", rec->uwTCP_MyFINACKed);
         printf("  uwTCP_Timer:        $%08lx\r", rec->uwTCP_Timer);
-        printf("  uwTCP_TimerState:   $%04x\r", rec->uwTCP_TimerState);
+
+        x = rec->uwTCP_TimerState;
+        printf("  uwTCP_TimerState:   $%04x", x);
+        if ((x & 0x01) == 0) {
+            x >>= 1;
+            if (x < sizeof(timer_states)/sizeof(timer_states[0]))
+                printf("     (%s)", timer_states[x]);
+        }
+        fputs("\r", stdout);
+
         printf("  uwTCP_rt_timer:     $%04x\r", rec->uwTCP_rt_timer);
         printf("  uwTCP_2MSL_timer:   $%04x\r", rec->uwTCP_2MSL_timer);
         printf("  uwTCP_SaveTTL:      $%04x\r", rec->uwTCP_SaveTTL);
