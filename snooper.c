@@ -345,6 +345,41 @@ void DisplayTCP(void) {
 
 void DisplayIpid2(unsigned page, userRecord *rec) {
 
+
+    static char *error_codes[] = {
+        "OK",
+        "DeafDestPort",
+        "HostReset",
+        "ConExists",
+        "ConIllegal",
+        "NoResources",
+        "NoSocket",
+        "BadPrec",
+        "BadSec",
+        "BadConnection",
+        "ConClosing",
+        "Closing",
+        "ConReset",
+        "UserTimeout",
+        "ConRefused",
+    };
+
+    static char *states[] = {
+        "CLOSED",
+        "LISTEN",
+        "SYNSENT",
+        "SYNRCVD",
+        "ESTABLISHED",
+        "FINWAIT1",
+        "FINWAIT2",
+        "CLOSEWAIT",
+        "LASTACK",
+        "CLOSING",
+        "TIMEWAIT",
+    };
+
+    unsigned x;
+
     print_tab("User Record", 11);
 
     if (page == 0) {
@@ -352,12 +387,12 @@ void DisplayIpid2(unsigned page, userRecord *rec) {
 
         printf("  uwUserID:           $%04x\r", rec->uwUserID);
         printf("  uwDestIP:           $%08lx (%b)\r", rec->uwDestIP, buffer);
-        printf("  uwDestPort:         $%04x (%u)\r", rec->uwDestPort,
+        printf("  uwDestPort:         $%04x     (%u)\r", rec->uwDestPort,
                rec->uwDestPort);
         printf("  uwIP_TOS:           $%04x\r", rec->uwIP_TOS);
         printf("  uwIP_TTL:           $%04x\r", rec->uwIP_TTL);
 
-        printf("  uwSourcePort:       $%04x (%u)\r", rec->uwSourcePort,
+        printf("  uwSourcePort:       $%04x     (%u)\r", rec->uwSourcePort,
                rec->uwSourcePort);
         printf("  uwLogoutPending:    $%04x\r", rec->uwLogoutPending);
         printf("  uwICMPQueue:        $%08lx\r", rec->uwICMPQueue);
@@ -387,9 +422,20 @@ void DisplayIpid2(unsigned page, userRecord *rec) {
         printf("  uwRCV_WND:          $%04x\r", rec->uwRCV_WND);
         printf("  uwRCV_UP:           $%04x\r", rec->uwRCV_UP);
         printf("  uwIRS:              $%08lx\r", rec->uwIRS);
-        printf("  uwTCP_State:        $%04x\r", rec->uwTCP_State);
+        x = rec->uwTCP_State;
+        printf("  uwTCP_State:        $%04x", x);
+        if (x < sizeof(states)/sizeof(states[0]))
+            printf("     (%s)", states[x]);
+        fputs("\r", stdout);
+
         printf("  uwTCP_StateTick:    $%08lx\r", rec->uwTCP_StateTick);
-        printf("  uwTCP_ErrCode:      $%04x\r", rec->uwTCP_ErrCode);
+
+        x = rec->uwTCP_ErrCode;
+        printf("  uwTCP_ErrCode:      $%04x", x);
+        if (x < sizeof(error_codes)/sizeof(error_codes[0]))
+            printf("     (%s)", error_codes[x]);
+        fputs("\r", stdout);
+
         printf("  uwTCP_ICMPError:    $%04x\r", rec->uwTCP_ICMPError);
         printf("  uwTCP_Server:       $%04x\r", rec->uwTCP_Server);
         printf("  uwTCP_ChildList:    $%08lx\r", rec->uwTCP_ChildList);
