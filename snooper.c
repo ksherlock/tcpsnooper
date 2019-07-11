@@ -542,14 +542,14 @@ int DisplayIpid(unsigned ipid) {
             c = ReadKey();
             if (c == 0x1b || c == 'Q' || c == 'q')
                 return 0;
-            if (c == LEFT) {
+            if (c == LEFT || c == UP) {
                 if (page == 0)
                     page = MAX_PAGE;
                 else
                     --page;
                 break;
             }
-            if (c == RIGHT) {
+            if (c == RIGHT || c == DOWN) {
                 if (page == MAX_PAGE)
                     page = 0;
                 else
@@ -790,14 +790,14 @@ void DisplayMain(void) {
             c = ReadKey();
             if (c == 'Q' || c == 'q' || c == ESC)
                 return;
-            if (c == LEFT) {
+            if (c == LEFT || c == UP) {
                 if (page == 0)
                     page = MAX_PAGE;
                 else
                     --page;
                 break;
             }
-            if (c == RIGHT) {
+            if (c == RIGHT || c == DOWN) {
                 if (page == MAX_PAGE)
                     page = 0;
                 else
