@@ -54,7 +54,7 @@ void Display(Word ipid, srBuff *srBuffer) {
                              "xxx.xxx.xxx.xxx " // 16	address
                              "xxxxx "           // 6	source port
                              "xxxxx "           // 6	dest port
-                             "$xxxxxxxx "       // 10     rcv queue
+                             "$xxxxxxxx "       // 10	rcv queue
                              "$xxxxxxxx ";      // 10	send queue
     static char buffer16[16];
 
