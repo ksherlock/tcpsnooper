@@ -673,6 +673,51 @@ void DisplayErrors(void) {
     putchar('\r');
 }
 
+void DisplayToolErrors(unsigned page) {
+
+    print_tab("Tool Errors", 11);
+    if (page == 0)
+        fputs(
+            "  $3601 BADIPID           Bad IPID for this request\r"
+            "  $3602 NOCONNECTION      Not connected to the network\r"
+            "  $3603 NORECONDATA       No reconnect data\r"
+            "  $3604 LINKERROR         Problem with the link layer\r"
+            "  $3605 SCRIPTFAILED      The script failed / timed out\r"
+            "  $3606 CONNECTED         Not while connected to the network\r"
+            "  $3607 SOCKETOPEN        Socket still open\r"
+            "  $3608 INITNOTFOUND      Init not found in memory\r"
+            "  $3609 VERSIONMISMATCH   Different versions of tool, init, cdev\r"
+            "  $360A BADTUNETABLELEN   Bad tune table length\r"
+            "  $360B IPIDTABLEFULL     IPID table full\r"
+            "  $360C NOICMPQUEUED      No ICMP datagrams in the queue\r"
+            "  $360D LOGINSPENDING     There are still IPIDs logged in\r"
+            "  $360E TCPIPNOTACTIVE    Not active. Probably in P8 mode.\r"
+            "  $360F NODNSERVERS       No servers registered with Marinetti\r",
+            stdout);
+    if (page == 1)
+        fputs(
+            "  $3610 DNRBUSY           DNR is current busy. Try again later\r"
+            "  $3611 NOLINKLAYER       Unable to load link layer module\r"
+            "  $3612 BADLINKLAYER      Not a link layer module\r"
+            "  $3613 ENJOYCOKE         But not so close to the keyboard\r"
+            "  $3614 NORECONSUPPRT     This module doesn't support reconnect\r"
+            "  $3615 USERABORTED       The user aborted the connect/disconnect script\r"
+            "  $3616 BADUSERPASS       Invalid username and/or password\r"
+            "  $3617 BADPARAMETER      Invalid parameter for this call\r"
+            "  $3618 BADENVIRONMENT    No desktop or tools not started\r"
+            "  $3619 NOINCOMING        There is no pending incoming request\r"
+            "  $361A LINKBUSY          Modem or interface is busy\r"
+            "  $361B NOLINKINTERFACE   No dial tone or similar\r"
+            "  $361C NOLINKRESPONSE    No modem answer or similar\r"
+            "  $361D NODNRPENDING      No such entry in DNR list\r"
+            "  $361E BADALIVEMINUTES   Minutes value is invalid\r"
+            "  $361F BUFFERTOOSMALL    Buffer is too small\r"
+            "  $3620 NOTSERVER         This ipid is not set up as a server\r"
+            "  $3621 BADTRIGGERNUM     Invalid trigger number\r",
+        stdout);
+
+}
+
 /*
 putchar(30);
 putchar(32 + 0);
@@ -682,7 +727,7 @@ putchar(29);
 #define status_line() fputs("\x1e\x20\x37\x1d", stdout)
 void DisplayMain(void) {
 
-    enum { MAX_PAGE = 5 };
+    enum { MAX_PAGE = 7 };
     char c;
     unsigned page = 0;
 
@@ -706,6 +751,12 @@ void DisplayMain(void) {
             break;
         case 5:
             DisplayDP();
+            break;
+        case 6:
+            DisplayToolErrors(0);
+            break;
+        case 7:
+            DisplayToolErrors(1);
             break;
         }
 
