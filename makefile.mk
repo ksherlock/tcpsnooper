@@ -27,9 +27,6 @@
 #for use with dmake(1)
 # for compiling netstat and tcpsnooper.cda
 
-# Requires Kelvin's modified Orca C library to be present in the current directory.
-# Kelvin's modified Orca C library includes an implementation of fdprintf()
-
 CFLAGS	+=  $(DEFINES) -v #-O
 
 netstat: netstat.o
