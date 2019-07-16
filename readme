@@ -1,41 +1,11 @@
 TCP Snooper
 
-TCP Snooper is a Classic Desk Accessory (CDA) which shows some information on all currently active Marinetti TCP connections.  It is useful if youUre programming or debugging a TCP program, or if you just like to know whatUs going on with your system.
-
-Information shown includes the ipid, state, address. source port, destination port, and how much data is in the receive queue and send queue.
-
-Kelvin Sherlock, 2004-2006
+TCP Snooper is a Classic Desk Accessory (CDA) which displays information on all currently active Marinetti TCP connections.  It is useful if youUre programming or debugging a TCP program, or if you just like to know what's going on with your system.
 
 
 How To Build TCP Snooper
 ======================
 
-TCP Snooper is written in Orca/C and Orca/M, therefore you will need both Orca/C and Orca/M to be able to build this utility.
+TCP Snooper is written in ORCA/C.  It can be built usig Golden Gate (GNUmakefile) or with GNO/ME (using dmake - makefile.mk).
 
-To be able to follow these instructions without modification, you will need to have the the GNO/ME environment installed. It should also be possible to build the utility using the Orca environment, however no instructions are provided on how to do this.
-
-Prerequisites
-------------
-Kelvin has modified his liborca library to include an implementation of fdprintf() which is used by TCP Snooper. Kelvin's modified liborca library cannot be released as part of the Marinetti Open Source Project, but it is required to be able to build TCP Snooper.
-
-You can download Kelvin's Orca library from http://iigs.ksherlock.com/liborca/
-Place it in the same directory as the TCP Snooper source code.
-
-You also need to generate the macro file that is used by the source code.
-
-If you are using GNO/ME you can do this with the following command:
-macgen cda.mac /lang/orca/libraries/ainclude/m16.* /lang/orca/libraries/orcainclude/m16.tools /lang/orca/libraries/ainclude/m16.orca
-
-If you are using Orca:
-macgen cda.mac 2:ainclude:m16.= 2:orcainclude:m16.tools 2:orcainclude:m16.orca
-
-
-Build TCPSnooper
----------------
-A makefile for use with dmake is provided. dmake should be installed in your GNO/ME environment.
-
-The makefile can be used to make either the command line version or the CDA version of the utility.
-
-dmake netstat --> creates command line version
-dmake tcpsnooper.cda -->creates CDA version
-
+It can also be manually built under ORCA Shell (`cmpl snooper.c keep=snooper.cda`)
