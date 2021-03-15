@@ -311,13 +311,15 @@ void DisplayLinkLayer(void) {
 void DisplayTCP(void) {
 
     static DNSRec dns;
+    unsigned long version;
     Long l;
 
     print_tab("TCP Status", 10);
 
     // version
-    VersionString(0, TCPIPLongVersion(), buffer);
-    printf("  Version:            %b\r", buffer);
+    version = TCPIPLongVersion();
+    VersionString(0, version, buffer);
+    printf("  Version:            %b ($%08lx)\r", buffer, version);
     printf("  Connect Status:     $%04x\r", TCPIPGetConnectStatus());
 
     // ip address
